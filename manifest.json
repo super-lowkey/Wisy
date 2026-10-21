@@ -1,0 +1,42 @@
+{
+  "format": "wisy-encrypted-download/v1",
+  "package_id": "0c2eff601f5811cf",
+  "algorithm": "AES-256-GCM",
+  "filename": "pathspec-batch-matching.zip",
+  "original_bytes": 133808276,
+  "original_sha256": "ca264a838b2983fe8b3a8258d0f4f61a1e00f5c52021cdfa065781c50856ad52",
+  "parts": [
+    {
+      "index": 1,
+      "name": "part-01.bin",
+      "bytes": 33452085,
+      "plaintext_bytes": 33452069,
+      "nonce": "K-dQvUnUkeG1cu2b",
+      "sha256": "706feabe5ef7d0ef97bcc614417236173c4400f86e902131b21b69b26601e8e9"
+    },
+    {
+      "index": 2,
+      "name": "part-02.bin",
+      "bytes": 33452085,
+      "plaintext_bytes": 33452069,
+      "nonce": "ayyA-9f0RrHLp7di",
+      "sha256": "9bf02229117438c233210bdba0206ceab78db48d5f57626f69ffd054f3c9e087"
+    },
+    {
+      "index": 3,
+      "name": "part-03.bin",
+      "bytes": 33452085,
+      "plaintext_bytes": 33452069,
+      "nonce": "36SEEV_IsiYtZCUX",
+      "sha256": "1e03e41ec1365924b7c64f0f3b20f5592aeddc2a19d824674f332a4bd2e12be5"
+    },
+    {
+      "index": 4,
+      "name": "part-04.bin",
+      "bytes": 33452085,
+      "plaintext_bytes": 33452069,
+      "nonce": "TXUk4Vr0vvVe-eP6",
+      "sha256": "63491ed238d0f92c58f37819e12d5f5836d7f0923df1ec0de4bab91c562ed285"
+    }
+  ]
+}
