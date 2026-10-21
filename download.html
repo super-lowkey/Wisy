@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-5bWPOtbMwabxvR2pDsUTKAK/vsUSjQ2G/FewAgjhODI='; style-src 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Unlock your task ZIP</title>
+<style>
+body{font:16px/1.55 system-ui,sans-serif;margin:0;background:#f4f6f8;color:#17212b}main{max-width:690px;margin:7vh auto;padding:32px;background:white;border:1px solid #dce1e6;border-radius:14px}h1{font-size:27px;margin-top:0}label{display:block;font-weight:600;margin-top:22px}input{box-sizing:border-box;width:100%;padding:12px;margin:7px 0;border:1px solid #a6b1bc;border-radius:6px;font:inherit}button{background:#1858b8;color:white;border:0;border-radius:6px;padding:13px 18px;font:inherit;font-weight:600;cursor:pointer;margin-top:20px}button:disabled{opacity:.6;cursor:wait}progress{width:100%;margin-top:24px}#status[data-state=error]{color:#a21717}#status[data-state=success]{color:#166538}small{color:#4e5a65}code{background:#f0f2f5;padding:1px 4px;border-radius:3px}a{display:block;margin-top:14px}
+</style></head><body><main>
+<h1>Unlock your task ZIP</h1>
+<p>After extracting the encrypted download package, select all four <code>.bin</code> files. Paste the key from your chat, then unlock the original ZIP.</p>
+<small>Decryption runs entirely in this browser. No file or key is sent over the network. Python and installation are not required.</small>
+<label for="files">1. Select all four encrypted parts</label>
+<input id="files" type="file" accept=".bin" multiple>
+<label for="key">2. Paste your decryption key</label>
+<input id="key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="43-character key from your chat">
+<button id="unlock" type="button">Unlock and download ZIP</button>
+<progress id="progress" value="0" max="4"></progress>
+<p id="status" role="status" aria-live="polite">Ready. Select the four parts and enter your key.</p>
+</main><script>
+'use strict';
+const manifest = {"format": "wisy-encrypted-download/v1", "package_id": "4a42380ca738df15", "algorithm": "AES-256-GCM", "filename": "pathspec-batch-matching-v4.zip", "original_bytes": 217740591, "original_sha256": "345b42145ecb265cb1db05d8dac99b5c5617efa5572c971b0dee4442c55dd38e", "parts": [{"index": 1, "name": "part-01.bin", "bytes": 54435164, "plaintext_bytes": 54435148, "nonce": "VjLGkjw1dO2Y3M5H", "sha256": "d4b5514ccaa981757ae16da9c49f7eca75d7d03f89fae42bb42d640c9fe232db"}, {"index": 2, "name": "part-02.bin", "bytes": 54435164, "plaintext_bytes": 54435148, "nonce": "dHkZzroEsJBqWMBk", "sha256": "b2bf65f6a8e923015e94ffdc9ca096aeb88197c8091d94001c69e104a3f434db"}, {"index": 3, "name": "part-03.bin", "bytes": 54435164, "plaintext_bytes": 54435148, "nonce": "_gQQBYeioY1RJL_a", "sha256": "d25b7130fc778f12ec9b16efc92434de43de8a9e0431aaf107ba23c2a7c4cebd"}, {"index": 4, "name": "part-04.bin", "bytes": 54435163, "plaintext_bytes": 54435147, "nonce": "VErJr30nW_rm10aq", "sha256": "811e249c0e62e27f7e7ea6fafc9232493b4fe60ff129465d54d0c785392b5351"}]};
+const filesInput = document.querySelector('#files');
+const keyInput = document.querySelector('#key');
+const unlockButton = document.querySelector('#unlock');
+const status = document.querySelector('#status');
+const progress = document.querySelector('#progress');
+function decode64(text) {
+  const normalized = text.replace(/-/g, '+').replace(/_/g, '/');
+  const binary = atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '='));
+  return Uint8Array.from(binary, char => char.charCodeAt(0));
+}
+function hex(bytes) {
+  return Array.from(new Uint8Array(bytes), byte => byte.toString(16).padStart(2, '0')).join('');
+}
+function setStatus(message, error = false) {
+  status.textContent = message;
+  status.dataset.state = error ? 'error' : 'working';
+}
+unlockButton.addEventListener('click', async () => {
+  unlockButton.disabled = true;
+  progress.value = 0;
+  setStatus('Checking the selected files…');
+  try {
+    if (!globalThis.crypto || !crypto.subtle) {
+      throw new Error('Web Crypto is unavailable. Open this downloaded HTML file in current Chrome or Edge.');
+    }
+    const text = keyInput.value.trim();
+    if (!/^[A-Za-z0-9_-]{43}=?$/.test(text)) {
+      throw new Error('Paste the complete 43-character decryption key.');
+    }
+    const keyBytes = decode64(text);
+    if (keyBytes.length !== 32) throw new Error('The decryption key must contain 32 bytes.');
+    const files = Array.from(filesInput.files);
+    if (files.length !== manifest.parts.length) {
+      throw new Error(`Select all ${manifest.parts.length} .bin files together.`);
+    }
+    const selected = new Map();
+    for (const file of files) {
+      if (selected.has(file.name)) throw new Error('Duplicate filenames selected.');
+      selected.set(file.name, file);
+    }
+    const key = await crypto.subtle.importKey('raw', keyBytes, 'AES-GCM', false, ['decrypt']);
+    keyBytes.fill(0);
+    const chunks = [];
+    let total = 0;
+    for (const part of manifest.parts) {
+      setStatus(`Verifying and decrypting part ${part.index} of ${manifest.parts.length}…`);
+      const file = selected.get(part.name);
+      if (!file) throw new Error(`Missing ${part.name}; select the original .bin files.`);
+      if (file.size !== part.bytes) throw new Error(`${part.name} is incomplete; download the package again.`);
+      const ciphertext = await file.arrayBuffer();
+      if (hex(await crypto.subtle.digest('SHA-256', ciphertext)) !== part.sha256) {
+        throw new Error(`${part.name} is damaged; download the package again.`);
+      }
+      const aad = `${manifest.format}|${manifest.package_id}|${part.index}|${manifest.parts.length}|${manifest.filename}|${manifest.original_sha256}`;
+      let plain;
+      try {
+        plain = await crypto.subtle.decrypt({name: 'AES-GCM', iv: decode64(part.nonce),
+          additionalData: new TextEncoder().encode(aad), tagLength: 128}, key, ciphertext);
+      } catch (_) {
+        throw new Error('Decryption failed. Check that the key belongs to this package.');
+      }
+      if (plain.byteLength !== part.plaintext_bytes) throw new Error('Decrypted part length mismatch.');
+      chunks.push(new Uint8Array(plain));
+      total += plain.byteLength;
+      progress.value = part.index;
+    }
+    if (total !== manifest.original_bytes) throw new Error('Reconstructed file size mismatch.');
+    setStatus('Verifying the complete ZIP…');
+    const joined = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) {
+      joined.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    if (hex(await crypto.subtle.digest('SHA-256', joined)) !== manifest.original_sha256) {
+      throw new Error('The complete ZIP failed its SHA-256 check.');
+    }
+    const blob = new Blob([joined], {type: 'application/zip'});
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = manifest.filename;
+    anchor.textContent = 'Download the verified ZIP again';
+    const previous = document.querySelector('#download-link');
+    if (previous) previous.remove();
+    anchor.id = 'download-link';
+    document.querySelector('main').append(anchor);
+    anchor.click();
+    setStatus(`Verified. Your browser is downloading ${manifest.filename}. Choose Downloads if prompted.`);
+    status.dataset.state = 'success';
+    keyInput.value = '';
+  } catch (error) {
+    setStatus(error.message || 'Unable to decrypt the package.', true);
+  } finally {
+    unlockButton.disabled = false;
+  }
+});
+</script></body></html>
